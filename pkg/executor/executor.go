@@ -24,7 +24,6 @@ const workspaceDir = "/.bld/workspace"
 
 // Executor executes the build steps.
 type Executor struct {
-	logger log.Logger
 	client *client.Client
 }
 
@@ -143,12 +142,14 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	e.logger.Printf("pulling %s", step.Image)
+	logger := log.ContextGetLogger(ctx)
+
+	logger.Printf("pulling %s", step.Image)
 	if err := e.pullImage(ctx, step.Image); err != nil {
 		return err
 	}
 
-	e.logger.V(4).Printf("building entrypoint entrypoint=%s", entrypoint)
+	logger.V(4).Printf("building entrypoint entrypoint=%s", entrypoint)
 	if err := buildEntrypoint(execDir+"/"+entrypoint, step.Commands); err != nil {
 		return err
 	}
@@ -156,7 +157,7 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 	config, hostConfig, netConfig := e.getConfig(step)
 
 	var id string
-	e.logger.V(4).Printf("creating container name=%v container=%+v host=%+v",
+	logger.V(4).Printf("creating container name=%v container=%+v host=%+v",
 		step.BuildID+"_"+step.Name, config, hostConfig)
 	{
 		var err error
@@ -166,8 +167,8 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 		}
 	}
 
-	e.logger.V(4).Printf("container started id=%s", id)
-	go e.logs(ctx, e.logger, id)
+	logger.V(4).Printf("container started id=%s", id)
+	go e.logs(ctx, logger, id)
 
 	var exitCode int
 	{
@@ -178,7 +179,7 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 		}
 	}
 
-	e.logger.V(4).Printf("container finished code=%v", exitCode)
+	logger.V(4).Printf("container finished code=%v", exitCode)
 	if exitCode != 0 {
 		return fmt.Errorf("container: exit code %d", exitCode)
 	}
@@ -208,7 +209,7 @@ type dockerWriter struct {
 
 func (d *dockerWriter) Write(b []byte) (int, error) {
 	for _, line := range strings.Split(strings.TrimSpace(string(b)), "\n") {
-		d.l.Printf("[%s] %s", d.id[:7], line)
+		d.l.Printf("> %s", line)
 	}
 	return len(b), nil
 }

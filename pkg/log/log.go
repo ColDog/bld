@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -8,9 +9,24 @@ import (
 	"time"
 )
 
+type contextKey int
+
+var key contextKey
+
 var level uint32
 
 func Level(l uint32) { atomic.StoreUint32(&level, l) }
+
+func ContextGetLogger(ctx context.Context) Logger {
+	if v, ok := ctx.Value(key).(Logger); ok {
+		return v
+	}
+	return Logger{}
+}
+
+func ContextWithLogger(ctx context.Context, l Logger) context.Context {
+	return context.WithValue(ctx, key, l)
+}
 
 type Logger struct {
 	level  uint32

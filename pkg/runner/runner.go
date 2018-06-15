@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/coldog/bld/pkg/builder"
 	"github.com/coldog/bld/pkg/content"
@@ -22,10 +24,21 @@ type Runner struct {
 	Perform  func(ctx context.Context, step builder.StepExec) error
 	Workers  int
 
+	steps map[string]string
+
 	logger        log.Logger
 	lock          sync.RWMutex
 	sourceDirs    map[string]string
 	sourceDigests map[string]string
+}
+
+func (r *Runner) recordStep(name, digest string) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	if r.steps == nil {
+		r.steps = map[string]string{}
+	}
+	r.steps[name] = digest
 }
 
 func (r *Runner) addSrc(name, target string) error {
@@ -84,25 +97,30 @@ func (r *Runner) sourceDir(name string) string {
 }
 
 func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
+	start := time.Now()
+
 	imports := []string{}
 	for _, imp := range step.Imports {
 		imports = append(imports, r.getSrcDigest(imp.Source))
 	}
 	digest := content.DigestStrings(imports...)
+	r.recordStep(step.Name, digest)
 
-	r.logger.Printf("STEP: %s (%s)", step.Name, digest)
+	logger := r.logger.Prefix(r.Build.ID + "/" + step.Name)
+	logger.Printf("STEP: %s (%s)", step.Name, digest)
 
 	if _, err := r.Store.GetKey("step/" + r.Build.Name + "/" + step.Name + "/" + digest); err == nil {
-		r.logger.V(4).Printf("restoring exports digest=%s step=%+v", digest, step)
-		r.logger.Printf("--> cached")
+		logger.V(4).Printf("restoring exports digest=%s step=%+v", digest, step)
+		logger.Printf("> %s: step cached (%v)", step.Name, time.Since(start))
 		return r.restoreExports(ctx, digest, step)
 	}
-	r.logger.V(4).Printf("running step digest=%s step=%+v", digest, step)
+	logger.V(4).Printf("running step digest=%s step=%+v", digest, step)
 
 	if err := r.prepareExports(ctx, step); err != nil {
 		return err
 	}
 
+	ctx = log.ContextWithLogger(ctx, logger)
 	exec := builder.StepExec{
 		Step:       step,
 		SourceDirs: r.collectSources(),
@@ -110,15 +128,17 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 		BuildID:    r.Build.ID,
 		RootDir:    r.RootDir,
 	}
-	r.logger.V(4).Printf("executing step: %+v", exec)
+	logger.V(4).Printf("executing step: %+v", exec)
 	if err := r.Perform(ctx, exec); err != nil {
 		return err
 	}
 
-	r.logger.V(4).Printf("saving exports %+v", step.Exports)
+	logger.V(4).Printf("saving exports %+v", step.Exports)
 	if err := r.saveExports(ctx, digest, step); err != nil {
 		return err
 	}
+
+	logger.Printf("> %s: step finished (%v)", step.Name, time.Since(start))
 	return r.Store.PutKey("step/"+r.Build.Name+"/"+step.Name+"/"+digest, "")
 }
 
@@ -137,6 +157,9 @@ func (r *Runner) restoreExports(
 		dir := r.sourceDir(exp.Source)
 		if err := r.Store.Load(key, dir); err != nil {
 			return fmt.Errorf("failed to load: %v", err)
+		}
+		if err := r.addSrc(exp.Source, dir); err != nil {
+			return fmt.Errorf("failed to restore %s: %v", exp.Source, err)
 		}
 	}
 	return nil
@@ -188,6 +211,21 @@ func (r *Runner) run(ctx context.Context, name string) error {
 		return fmt.Errorf("step not found: %s", name)
 	}
 	return r.runStep(ctx, step)
+}
+
+func (r *Runner) checksum() string {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	keys := []string{}
+	for k := range r.steps {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	digests := []string{}
+	for _, k := range keys {
+		digests = append(digests, r.steps[k])
+	}
+	return content.DigestStrings(digests...)
 }
 
 func (r *Runner) Run(ctx context.Context) error {
@@ -247,6 +285,8 @@ func (r *Runner) Run(ctx context.Context) error {
 	for e := range errs {
 		return e
 	}
+
+	log.Printf("finished (%s)", r.checksum())
 	return nil
 }
 
