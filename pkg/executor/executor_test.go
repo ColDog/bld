@@ -87,3 +87,18 @@ func TestMountExport(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, "hello\n", string(data))
 }
+
+func TestCommit(t *testing.T) {
+	test(t, builder.StepExec{
+		Step: builder.Step{
+			Name:     "test",
+			Image:    "alpine",
+			Commands: []string{"echo 'hello' > /test.txt"},
+			Save: builder.Image{
+				Tag:        "test",
+				Entrypoint: []string{"/bin/sh"},
+			},
+		},
+		BuildID: genid.ID(),
+	})
+}

@@ -41,15 +41,28 @@ func (r *Runner) recordStep(name, digest string) {
 	r.steps[name] = digest
 }
 
-func (r *Runner) addSrc(name, target string) error {
+func (r *Runner) addSrc(name, target string, files []string) error {
 	if err := os.MkdirAll(target, 0700); err != nil {
 		r.logger.V(4).Printf("failed to mkdirall target dir: %v", err)
 	}
 
-	digest, err := content.DigestDir(target)
-	if err != nil {
-		return err
+	var digest string
+	{
+		var err error
+		if len(files) > 0 {
+			digest, err = content.DigestFiles(target, files)
+			if err != nil {
+				return err
+			}
+		} else {
+			digest, err = content.DigestDir(target)
+			if err != nil {
+				return err
+			}
+		}
+
 	}
+
 	r.logger.V(4).Printf("adding source src=%s target=%s digest=%s", name, target, digest)
 	r.lock.Lock()
 	defer r.lock.Unlock()
@@ -158,7 +171,7 @@ func (r *Runner) restoreExports(
 		if err := r.Store.Load(key, dir); err != nil {
 			return fmt.Errorf("failed to load: %v", err)
 		}
-		if err := r.addSrc(exp.Source, dir); err != nil {
+		if err := r.addSrc(exp.Source, dir, nil); err != nil {
 			return fmt.Errorf("failed to restore %s: %v", exp.Source, err)
 		}
 	}
@@ -168,7 +181,7 @@ func (r *Runner) restoreExports(
 func (r *Runner) prepareExports(ctx context.Context, step builder.Step) error {
 	for _, exp := range step.Exports {
 		dir := r.sourceDir(exp.Source)
-		if err := r.addSrc(exp.Source, dir); err != nil {
+		if err := r.addSrc(exp.Source, dir, nil); err != nil {
 			return fmt.Errorf("failed to prepare %s: %v", exp.Source, err)
 		}
 	}
@@ -179,7 +192,7 @@ func (r *Runner) saveExports(
 	ctx context.Context, digest string, step builder.Step) error {
 	for _, exp := range step.Exports {
 		dir := r.sourceDir(exp.Source)
-		if err := r.addSrc(exp.Source, dir); err != nil {
+		if err := r.addSrc(exp.Source, dir, nil); err != nil {
 			return err
 		}
 		sourceDigest := r.getSrcDigest(exp.Source)
@@ -194,7 +207,7 @@ func (r *Runner) saveExports(
 }
 
 func (r *Runner) runSource(ctx context.Context, src builder.Source) error {
-	return r.addSrc(src.Name, r.dir(src.Target))
+	return r.addSrc(src.Name, r.dir(src.Target), src.Files)
 }
 
 func (r *Runner) run(ctx context.Context, name string) error {

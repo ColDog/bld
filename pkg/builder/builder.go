@@ -27,13 +27,21 @@ func (b Build) Step(name string) (Step, bool) {
 }
 
 type Source struct {
-	Name   string `json:"name"`
-	Target string `json:"target"`
+	Name   string   `json:"name"`
+	Target string   `json:"target"`
+	Files  []string `json:"files"`
 }
 
 type Mount struct {
 	Source string `json:"source"`
 	Mount  string `json:"mount"`
+}
+
+type Image struct {
+	Tag        string   `json:"tag"`
+	Entrypoint []string `json:"entrypoint"`
+	Env        []string `json:"env"`
+	Workdir    string   `json:"workdir"`
 }
 
 type Step struct {
@@ -46,6 +54,7 @@ type Step struct {
 	Tag      string   `json:"tag"`
 	Workdir  string   `json:"workdir"`
 	Env      []string `json:"env"`
+	Save     Image    `json:"save"`
 }
 
 type StepExec struct {

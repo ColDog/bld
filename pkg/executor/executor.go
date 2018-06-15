@@ -83,7 +83,9 @@ func (e *Executor) getBinds(step builder.StepExec) []string {
 	return binds
 }
 
-func (e *Executor) getConfig(step builder.StepExec) (*container.Config, *container.HostConfig, *network.NetworkingConfig) {
+func (e *Executor) getConfig(
+	step builder.StepExec,
+) (*container.Config, *container.HostConfig, *network.NetworkingConfig) {
 	binds := e.getBinds(step)
 	entrypoint := e.entrypointFile(step)
 
@@ -102,7 +104,13 @@ func (e *Executor) getConfig(step builder.StepExec) (*container.Config, *contain
 	return config, hostConfig, netConfig
 }
 
-func (e *Executor) startContainer(ctx context.Context, step builder.StepExec, config *container.Config, hostConfig *container.HostConfig, netConfig *network.NetworkingConfig) (string, error) {
+func (e *Executor) startContainer(
+	ctx context.Context,
+	step builder.StepExec,
+	config *container.Config,
+	hostConfig *container.HostConfig,
+	netConfig *network.NetworkingConfig,
+) (string, error) {
 	ct, err := e.client.ContainerCreate(
 		ctx, config, hostConfig, netConfig, step.BuildID+"_"+step.Name)
 	if err != nil {
@@ -115,16 +123,30 @@ func (e *Executor) startContainer(ctx context.Context, step builder.StepExec, co
 	return ct.ID, nil
 }
 
+func (e *Executor) commit(ctx context.Context, id string, image builder.Image) error {
+	_, err := e.client.ContainerCommit(ctx, id, types.ContainerCommitOptions{
+		Reference: image.Tag,
+		Config: &container.Config{
+			Image:      image.Tag,
+			Entrypoint: strslice.StrSlice(image.Entrypoint),
+			WorkingDir: image.Workdir,
+			Env:        image.Env,
+		},
+	})
+	return err
+}
+
+func (e *Executor) remove(ctx context.Context, id string) error {
+	err := e.client.ContainerRemove(ctx, id, types.ContainerRemoveOptions{})
+	return err
+}
+
 func (e *Executor) waitForExit(ctx context.Context, id string) (int, error) {
 	if _, err := e.client.ContainerWait(ctx, id); err != nil {
 		return 0, err
 	}
 	inspect, err := e.client.ContainerInspect(ctx, id)
 	if err != nil {
-		return 0, err
-	}
-	if err := e.client.ContainerRemove(
-		ctx, id, types.ContainerRemoveOptions{}); err != nil {
 		return 0, err
 	}
 	return inspect.State.ExitCode, nil
@@ -177,6 +199,15 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if step.Save.Tag != "" {
+		if err := e.commit(ctx, id, step.Save); err != nil {
+			return err
+		}
+	}
+	if err := e.remove(ctx, id); err != nil {
+		return err
 	}
 
 	logger.V(4).Printf("container finished code=%v", exitCode)
