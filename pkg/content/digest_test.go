@@ -12,3 +12,16 @@ func TestDigestDir(t *testing.T) {
 	require.NotEqual(t, "", digest)
 	println(digest)
 }
+
+func TestDigestFiles(t *testing.T) {
+	digest, err := DigestFiles("../../cmd", []string{"bld/main.go"})
+	require.Nil(t, err)
+	require.NotEqual(t, "", digest)
+	println(digest)
+}
+
+func TestDigestStrings(t *testing.T) {
+	digest := DigestStrings("test1", "test2")
+	require.NotEqual(t, "", digest)
+	println(digest)
+}

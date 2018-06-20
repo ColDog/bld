@@ -3,12 +3,13 @@ package runner
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/coldog/bld/pkg/fileutils"
 
 	"github.com/coldog/bld/pkg/builder"
 	"github.com/coldog/bld/pkg/content"
@@ -43,7 +44,7 @@ func (r *Runner) recordStep(name, digest string) {
 }
 
 func (r *Runner) addSrc(name, target string, files []string) error {
-	if err := os.MkdirAll(target, 0700); err != nil {
+	if err := os.MkdirAll(target, fileutils.Directory); err != nil {
 		r.logger.V(4).Printf("failed to mkdirall target dir: %v", err)
 	}
 
@@ -249,16 +250,6 @@ func (r *Runner) Run(ctx context.Context) error {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	{
-		os.MkdirAll(r.BuildDir+"/logs", 0700)
-		f, err := os.OpenFile(r.BuildDir+"/logs/"+r.Build.ID+".log", os.O_CREATE|os.O_RDWR, 0700)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		r.logger = r.logger.Output(io.MultiWriter(os.Stderr, f))
-	}
 
 	log := r.logger.Prefix(r.Build.Name)
 	r.logger = log

@@ -20,7 +20,10 @@ const (
 
 // Safe defaults for file permissions.
 const (
-	Regular    = Setuid | Setgid | Sticky | UserRead | UserWrite | GroupRead | GroupWrite | OtherRead | OtherWrite
-	Executable = Setuid | Setgid | Sticky | UserRead | UserWrite | UserExecute | GroupRead | GroupWrite | GroupExecute | OtherExecute | OtherRead | OtherWrite
-	Directory  = Executable
+	Regular = Setuid | Setgid | Sticky | UserRead | UserWrite | GroupRead |
+		GroupWrite | OtherRead | OtherWrite
+	Executable = Setuid | Setgid | Sticky | UserRead | UserWrite | UserExecute |
+		GroupRead | GroupWrite | GroupExecute | OtherExecute | OtherRead |
+		OtherWrite
+	Directory = Executable
 )

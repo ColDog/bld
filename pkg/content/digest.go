@@ -43,6 +43,7 @@ func reader(root string, h hash.Hash) filepath.WalkFunc {
 	}
 }
 
+// DigestDir performs a sha256 on all files in a directory.
 func DigestDir(root string) (string, error) {
 	h := sha256.New()
 	readFunc := reader(root, h)
@@ -53,6 +54,7 @@ func DigestDir(root string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
+// DigestFiles performs a sha256 on the specified files in the directory.
 func DigestFiles(root string, files []string) (string, error) {
 	h := sha256.New()
 	readFunc := reader(root, h)
@@ -71,6 +73,7 @@ func DigestFiles(root string, files []string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
+// DigestStrings performs a sha256 on a set of strings provided.
 func DigestStrings(strs ...string) string {
 	h := sha256.New()
 	sort.Strings(strs)

@@ -12,7 +12,8 @@ import (
 var ErrFinished = errors.New("selector finished")
 
 type Solver struct {
-	Build builder.Build
+	Build   builder.Build
+	Workers int
 
 	dependencies map[string]set
 	complete     *watchSet
@@ -35,6 +36,7 @@ func (s *Solver) Close() {
 
 func (s *Solver) Done(id string) { s.complete.add(id) }
 
+// Select will select work that needs to be completed from the graph.
 func (s *Solver) Select(ctx context.Context) (string, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -67,6 +69,8 @@ func (s *Solver) Select(ctx context.Context) (string, error) {
 	return id, nil
 }
 
+// Solve will begin the solving process. Select can be called after this to
+// select work that needs to be completed.
 func (s *Solver) Solve() {
 	s.selector = make(chan string)
 	s.complete = newWatchSet()
