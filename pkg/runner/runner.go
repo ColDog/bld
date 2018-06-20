@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -119,7 +120,7 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	digest := content.DigestStrings(imports...)
 	r.recordStep(step.Name, digest)
 
-	logger := r.logger.Prefix(r.Build.ID + "/" + step.Name)
+	logger := r.logger.Prefix(r.Build.Name + "/" + step.Name)
 	logger.Printf("STEP: %s (%s)", step.Name, digest)
 
 	if _, err := r.Store.GetKey("step/" + r.Build.Name + "/" + step.Name + "/" + digest); err == nil {
@@ -249,7 +250,17 @@ func (r *Runner) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	log := r.logger.Prefix(r.Build.ID)
+	{
+		os.MkdirAll(r.BuildDir+"/logs", 0700)
+		f, err := os.OpenFile(r.BuildDir+"/logs/"+r.Build.ID+".log", os.O_CREATE|os.O_RDWR, 0700)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		r.logger = r.logger.Output(io.MultiWriter(os.Stderr, f))
+	}
+
+	log := r.logger.Prefix(r.Build.Name)
 	r.logger = log
 
 	errs := make(chan error, r.Workers)

@@ -5,11 +5,10 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/coldog/bld/pkg/fileutils"
-	"github.com/coldog/bld/pkg/genid"
-
 	"github.com/coldog/bld/pkg/builder"
+	"github.com/coldog/bld/pkg/fileutils"
 	"github.com/coldog/bld/pkg/log"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,7 +35,7 @@ func TestEcho(t *testing.T) {
 			Image:    "alpine",
 			Commands: []string{"echo 'hello'"},
 		},
-		BuildID: genid.ID(),
+		BuildID: uuid.NewV4().String(),
 	})
 }
 
@@ -58,7 +57,7 @@ func TestMount(t *testing.T) {
 			Imports:  []builder.Mount{{Source: "test", Mount: "/mnt"}},
 			Volumes:  []builder.Mount{{Source: "cache", Mount: "/cache"}},
 		},
-		BuildID: genid.ID(),
+		BuildID: uuid.NewV4().String(),
 		SourceDirs: map[string]string{
 			"test":  tmp,
 			"cache": cacheTmp,
@@ -77,7 +76,7 @@ func TestMountExport(t *testing.T) {
 			Commands: []string{"echo 'hello' > /mnt/test.txt"},
 			Exports:  []builder.Mount{{Source: "out", Mount: "/mnt"}},
 		},
-		BuildID: genid.ID(),
+		BuildID: uuid.NewV4().String(),
 		SourceDirs: map[string]string{
 			"out": tmp,
 		},
@@ -99,6 +98,6 @@ func TestCommit(t *testing.T) {
 				Entrypoint: []string{"/bin/sh"},
 			},
 		},
-		BuildID: genid.ID(),
+		BuildID: uuid.NewV4().String(),
 	})
 }

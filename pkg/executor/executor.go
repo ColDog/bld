@@ -63,7 +63,7 @@ func (e *Executor) pullImage(ctx context.Context, image string) error {
 }
 
 func (e *Executor) execDir(step builder.StepExec) string {
-	return step.BuildDir + "/build/" + step.BuildID + "/workspace"
+	return step.BuildDir + "/workspaces/" + step.BuildID
 }
 
 func (e *Executor) getBinds(step builder.StepExec) []string {

@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/coldog/bld/pkg/builder"
@@ -12,6 +12,8 @@ import (
 	"github.com/coldog/bld/pkg/log"
 	"github.com/coldog/bld/pkg/runner"
 	"github.com/coldog/bld/pkg/store"
+	"github.com/ghodss/yaml"
+	uuid "github.com/satori/go.uuid"
 )
 
 func exitErr(msg string, args ...interface{}) {
@@ -23,6 +25,7 @@ func main() {
 	var (
 		target      string
 		buildDir    string
+		buildSpec   string
 		rootDir     string
 		backend     string
 		concurrency int
@@ -31,6 +34,7 @@ func main() {
 	wd, _ := os.Getwd()
 
 	flag.StringVar(&target, "target", wd, "target directory for the build")
+	flag.StringVar(&buildSpec, "spec", wd+"/.bld.yaml", "build specification")
 	flag.StringVar(&buildDir, "build-dir", wd+"/.bld", "target directory for the build")
 	flag.StringVar(&rootDir, "root-dir", wd, "root directory for the build")
 	flag.StringVar(&backend, "backend", "local", "storage backend")
@@ -42,18 +46,21 @@ func main() {
 
 	var build builder.Build
 	{
-		file := target + "/.bld.json"
-		f, err := os.Open(file)
+		f, err := os.Open(buildSpec)
 		if err != nil {
 			exitErr("Failed to open: %v", err)
 		}
-		err = json.NewDecoder(f).Decode(&build)
+		data, err := ioutil.ReadAll(f)
 		if err != nil {
-			exitErr("Failed to decode (%s): %v", file, err)
+			exitErr("Failed to read: %v", err)
+		}
+		err = yaml.Unmarshal(data, &build)
+		if err != nil {
+			exitErr("Failed to decode (%s): %v", buildSpec, err)
 		}
 	}
 
-	build.ID = id()
+	build.ID = uuid.NewV4().String()
 
 	var s store.Store
 	switch backend {

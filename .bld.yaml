@@ -1,0 +1,57 @@
+name: "bld"
+
+sources:
+- name: pkg
+  target: pkg
+- name: cmd
+  target: cmd
+- name: vendor
+  target: vendor
+
+volumes:
+- name: dockersock
+  target: "/var/run/docker.sock"
+- name: tmp
+  target: "/tmp"
+
+steps:
+- name: test
+  image: golang:1.10-alpine
+  commands:
+  - go test github.com/coldog/bld/pkg/...
+  workdir: "/go/src/github.com/coldog/bld"
+  volumes:
+  - source: dockersock
+    mount: "/var/run/docker.sock"
+  - source: tmp
+    mount: "/tmp"
+  imports:
+  - source: pkg
+    mount: "/go/src/github.com/coldog/bld/pkg"
+  - source: vendor
+    mount: "/go/src/github.com/coldog/bld/vendor"
+
+- name: build
+  image: golang:1.10-alpine
+  commands:
+  - go build -o /go/bin/bld github.com/coldog/bld/cmd/bld
+  workdir: "/go/src/github.com/coldog/bld"
+  imports:
+  - source: pkg
+    mount: "/go/src/github.com/coldog/bld/pkg"
+  - source: cmd
+    mount: "/go/src/github.com/coldog/bld/cmd"
+  - source: vendor
+    mount: "/go/src/github.com/coldog/bld/vendor"
+  exports:
+  - source: bin
+    mount: "/go/bin"
+
+- name: test-build
+  image: golang:1.10-alpine
+  commands:
+  - "/go/bin/bld -h || echo ok"
+  workdir: "/go/src/github.com/coldog/bld"
+  imports:
+  - source: bin
+    mount: "/go/bin"

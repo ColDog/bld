@@ -34,6 +34,14 @@ type Logger struct {
 	output io.Writer
 }
 
+func (l Logger) Output(out io.Writer) Logger {
+	return Logger{
+		level:  l.level,
+		prefix: l.prefix,
+		output: out,
+	}
+}
+
 func (l Logger) V(level uint32) Logger {
 	return Logger{
 		level:  level,

@@ -1,0 +1,50 @@
+sources:
+- name: deps
+  target: "."
+  files:
+  - package.json
+  - yarn.lock
+- name: app
+  target: "."
+
+steps:
+- name: install
+  image: node:8-alpine
+  commands:
+  - yarn install --modules-folder /usr/src/node_modules
+  workdir: "/usr/src/app"
+  imports:
+  - source: deps
+    mount: "/usr/src/app"
+  exports:
+  - source: modules
+    mount: "/usr/src/node_modules"
+
+- name: test
+  image: node:8-alpine
+  commands:
+  - yarn test
+  workdir: "/usr/src/app"
+  imports:
+  - source: app
+    mount: "/usr/src/app"
+  - source: modules
+    mount: "/usr/src/app/node_modules"
+
+- name: build
+  image: node:8-alpine
+  commands:
+  - cp -r /mnt/app /usr/src
+  - cp -r /mnt/node_modules /usr/src/app
+  workdir: "/usr/src/app"
+  imports:
+  - source: app
+    mount: "/mnt/app"
+  - source: modules
+    mount: "/mnt/node_modules"
+  save:
+    tag: examples/node
+    entrypoint:
+    - node
+    - index.js
+    workdir: "/usr/src/app"
