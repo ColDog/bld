@@ -54,6 +54,14 @@ func main() {
 		if err != nil {
 			exitErr("Failed to read: %v", err)
 		}
+		json, err := yaml.YAMLToJSON(data)
+		if err != nil {
+			exitErr("Failed to decode (%s): %v", buildSpec, err)
+		}
+		err = builder.Validate(json)
+		if err != nil {
+			exitErr("Invalid schema (%s): %v", buildSpec, err)
+		}
 		err = yaml.Unmarshal(data, &build)
 		if err != nil {
 			exitErr("Failed to decode (%s): %v", buildSpec, err)

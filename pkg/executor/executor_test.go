@@ -49,6 +49,8 @@ func TestMount(t *testing.T) {
 	err = ioutil.WriteFile(tmp+"/test.txt", []byte("I am in a file!"), fileutils.Regular)
 	require.Nil(t, err)
 
+	println(">> tmp", tmp, cacheTmp)
+
 	test(t, builder.StepExec{
 		Step: builder.Step{
 			Name:     "test",

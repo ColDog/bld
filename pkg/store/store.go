@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/coldog/bld/pkg/fileutils"
 )
 
 // NewLocalStore instantiates a store which will store data at dir.
@@ -27,12 +29,12 @@ func (s *local) Save(id, dir string) error {
 	if err := os.MkdirAll(filepath.Dir(key), 0700); err != nil {
 		return err
 	}
-	return tarTo(dir, key)
+	return fileutils.Tar(dir, key)
 }
 
 func (s *local) Load(id, dir string) error {
 	os.MkdirAll(dir, 0700)
-	return untarTo(s.dir+"/store/content/"+id, dir)
+	return fileutils.Untar(s.dir+"/store/content/"+id, dir)
 }
 
 func (s *local) PutKey(id, val string) error {

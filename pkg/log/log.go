@@ -76,7 +76,7 @@ func (l Logger) Printf(msg string, args ...interface{}) { l.write(msg, args...) 
 func (l Logger) write(s string, args ...interface{}) {
 	output := l.output
 	if output == nil {
-		output = os.Stderr
+		output = os.Stdout
 	}
 	current := atomic.LoadUint32(&level)
 	if l.level <= current {

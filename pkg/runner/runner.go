@@ -18,6 +18,7 @@ import (
 	"github.com/coldog/bld/pkg/store"
 )
 
+// Runner will run a specific build.
 type Runner struct {
 	Store    store.Store
 	BuildDir string
@@ -43,6 +44,7 @@ func (r *Runner) recordStep(name, digest string) {
 	r.steps[name] = digest
 }
 
+// AddSrc goes through the workflow of adding a source directory.
 func (r *Runner) addSrc(name, target string, files []string) error {
 	if err := os.MkdirAll(target, fileutils.Directory); err != nil {
 		r.logger.V(4).Printf("failed to mkdirall target dir: %v", err)
@@ -111,6 +113,15 @@ func (r *Runner) sourceDir(name string) string {
 	return r.BuildDir + "/sources/" + r.Build.ID + "/" + name + "/"
 }
 
+// RunStep executes all instructions for a given step. The workflow is as
+// follows:
+// 1. Digest all imports.
+// 2. Check if a digest exists from (1).
+// If the digest exists:
+// 	 3. Restore all exports from the found digest.
+// If the digest does not exist:
+//   3. Prepare exports for mounting.
+//   4. Run the step and save all exports.
 func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	start := time.Now()
 
@@ -157,6 +168,7 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	return r.Store.PutKey("step/"+r.Build.Name+"/"+step.Name+"/"+digest, "")
 }
 
+// RestoreExports will mount exports from the store.
 func (r *Runner) restoreExports(
 	ctx context.Context, digest string, step builder.Step) error {
 	for _, exp := range step.Exports {
@@ -180,6 +192,8 @@ func (r *Runner) restoreExports(
 	return nil
 }
 
+// PrepareExports will setup directories for exports so that they can be
+// mounted.
 func (r *Runner) prepareExports(ctx context.Context, step builder.Step) error {
 	for _, exp := range step.Exports {
 		dir := r.sourceDir(exp.Source)
@@ -190,6 +204,8 @@ func (r *Runner) prepareExports(ctx context.Context, step builder.Step) error {
 	return nil
 }
 
+// SaveExports will select exports for a given step and save them using the
+// store implementation.
 func (r *Runner) saveExports(
 	ctx context.Context, digest string, step builder.Step) error {
 	for _, exp := range step.Exports {
@@ -208,10 +224,20 @@ func (r *Runner) saveExports(
 	return nil
 }
 
+// RunSource will copy the source from the original target directory into a
+// scratch source directory after it is checksummed.
+// TODO: Performance improvement here is to only copy when changed.
 func (r *Runner) runSource(ctx context.Context, src builder.Source) error {
-	return r.addSrc(src.Name, r.dir(src.Target), src.Files)
+	srcDir := r.dir(src.Target)
+	destDir := r.sourceDir(src.Name)
+	if err := fileutils.Copy(srcDir, destDir); err != nil {
+		return err
+	}
+	return r.addSrc(src.Name, destDir, src.Files)
 }
 
+// Run will run a given target. It expects source targets to match:
+// `source/name`.
 func (r *Runner) run(ctx context.Context, name string) error {
 	sourceName, ok := isSource(name)
 	if ok {
@@ -228,6 +254,8 @@ func (r *Runner) run(ctx context.Context, name string) error {
 	return r.runStep(ctx, step)
 }
 
+// Checksum returns the checksum for the entire build, it depends on the step
+// map populated by each step.
 func (r *Runner) checksum() string {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
@@ -243,6 +271,7 @@ func (r *Runner) checksum() string {
 	return content.DigestStrings(digests...)
 }
 
+// Run executes the build, it will exit if the context is closed.
 func (r *Runner) Run(ctx context.Context) error {
 	s := &graph.Solver{
 		Build: r.Build,

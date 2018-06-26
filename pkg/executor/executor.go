@@ -91,6 +91,7 @@ func (e *Executor) getConfig(
 
 	config := &container.Config{
 		Image: step.Image,
+		User:  step.User,
 		Entrypoint: strslice.StrSlice{
 			workspaceDir + "/" + entrypoint,
 		},
@@ -131,6 +132,7 @@ func (e *Executor) commit(ctx context.Context, id string, image builder.Image) e
 			Entrypoint: strslice.StrSlice(image.Entrypoint),
 			WorkingDir: image.Workdir,
 			Env:        image.Env,
+			User:       image.User,
 		},
 	})
 	return err
@@ -171,7 +173,7 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 		return err
 	}
 
-	logger.V(4).Printf("building entrypoint entrypoint=%s", entrypoint)
+	logger.V(5).Printf("building entrypoint entrypoint=%s", entrypoint)
 	if err := buildEntrypoint(execDir+"/"+entrypoint, step.Commands); err != nil {
 		return err
 	}
@@ -179,7 +181,7 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 	config, hostConfig, netConfig := e.getConfig(step)
 
 	var id string
-	logger.V(4).Printf("creating container name=%v container=%+v host=%+v",
+	logger.V(5).Printf("creating container name=%v container=%+v host=%+v",
 		step.BuildID+"_"+step.Name, config, hostConfig)
 	{
 		var err error

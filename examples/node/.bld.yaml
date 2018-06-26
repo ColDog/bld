@@ -1,3 +1,5 @@
+name: node
+
 sources:
 - name: deps
   target: "."

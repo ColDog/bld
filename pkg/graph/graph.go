@@ -9,8 +9,11 @@ import (
 	"github.com/coldog/bld/pkg/builder"
 )
 
+// ErrFinished will be returned if the Solver is closed.
 var ErrFinished = errors.New("selector finished")
 
+// Solver is a graph solver. It takes a given build and returns units of work to
+// goroutines.
 type Solver struct {
 	Build   builder.Build
 	Workers int
@@ -21,6 +24,7 @@ type Solver struct {
 	done         chan struct{}
 }
 
+// Close should be called when processing is finished.
 func (s *Solver) Close() {
 	if s.complete != nil {
 		s.complete.close()
@@ -34,6 +38,8 @@ func (s *Solver) Close() {
 	}
 }
 
+// Done marks a unit of work as complete, any dependencies will now be
+// available.
 func (s *Solver) Done(id string) { s.complete.add(id) }
 
 // Select will select work that needs to be completed from the graph.

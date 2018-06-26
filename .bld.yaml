@@ -28,6 +28,8 @@ steps:
   imports:
   - source: pkg
     mount: "/go/src/github.com/coldog/bld/pkg"
+  - source: cmd
+    mount: "/go/src/github.com/coldog/bld/cmd"
   - source: vendor
     mount: "/go/src/github.com/coldog/bld/vendor"
 
