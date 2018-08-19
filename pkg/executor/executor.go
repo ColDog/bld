@@ -125,17 +125,35 @@ func (e *Executor) startContainer(
 }
 
 func (e *Executor) commit(ctx context.Context, id string, image builder.Image) error {
-	_, err := e.client.ContainerCommit(ctx, id, types.ContainerCommitOptions{
-		Reference: image.Tag,
-		Config: &container.Config{
-			Image:      image.Tag,
-			Entrypoint: strslice.StrSlice(image.Entrypoint),
-			WorkingDir: image.Workdir,
-			Env:        image.Env,
-			User:       image.User,
-		},
-	})
-	return err
+	var ref string
+	{
+		id, err := e.client.ContainerCommit(ctx, id, types.ContainerCommitOptions{
+			Reference: image.Tag,
+			Config: &container.Config{
+				Image:      image.Tag,
+				Entrypoint: strslice.StrSlice(image.Entrypoint),
+				WorkingDir: image.Workdir,
+				Env:        image.Env,
+				User:       image.User,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		ref = id.ID
+	}
+
+	if image.Push {
+		logger := log.ContextGetLogger(ctx)
+
+		logger.Printf("> pushing image %s sha=%s", image.Tag, ref)
+		_, err := e.client.ImagePush(ctx, image.Tag, types.ImagePushOptions{
+			RegistryAuth: image.RegistryAuth,
+		})
+		return err
+	}
+
+	return nil
 }
 
 func (e *Executor) remove(ctx context.Context, id string) error {

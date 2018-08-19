@@ -45,7 +45,7 @@ func (r *Runner) recordStep(name, digest string) {
 }
 
 // AddSrc goes through the workflow of adding a source directory.
-func (r *Runner) addSrc(name, target string, files []string) error {
+func (r *Runner) addSrc(name, target string, files []string, copy bool) error {
 	if err := os.MkdirAll(target, fileutils.Directory); err != nil {
 		r.logger.V(4).Printf("failed to mkdirall target dir: %v", err)
 	}
@@ -65,6 +65,20 @@ func (r *Runner) addSrc(name, target string, files []string) error {
 			}
 		}
 
+	}
+
+	// Copy files to a workspace if copy is set and reset the target equal to
+	// the new directory.
+	if copy {
+		srcDir := r.dir(target)
+		destDir := r.sourceWorkDir(digest)
+		r.logger.V(4).Printf("copying source target=%s dest=%s files=%s", target, destDir, files)
+		if _, err := os.Stat(destDir); os.IsNotExist(err) {
+			if err := fileutils.Copy(srcDir, destDir, files); err != nil {
+				return err
+			}
+		}
+		target = destDir
 	}
 
 	r.logger.V(4).Printf("adding source src=%s target=%s digest=%s", name, target, digest)
@@ -109,8 +123,12 @@ func (r *Runner) collectSources() map[string]string {
 
 func (r *Runner) dir(name string) string { return r.RootDir + "/" + name }
 
-func (r *Runner) sourceDir(name string) string {
-	return r.BuildDir + "/sources/" + r.Build.ID + "/" + name + "/"
+func (r *Runner) sourceMountDir(name string) string {
+	return r.BuildDir + "/sources/mount/" + r.Build.ID + "/" + name + "/"
+}
+
+func (r *Runner) sourceWorkDir(digest string) string {
+	return r.BuildDir + "/sources/work/" + digest + "/"
 }
 
 // RunStep executes all instructions for a given step. The workflow is as
@@ -125,7 +143,9 @@ func (r *Runner) sourceDir(name string) string {
 func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	start := time.Now()
 
-	imports := []string{}
+	imports := []string{
+		r.Build.Digest(),
+	}
 	for _, imp := range step.Imports {
 		imports = append(imports, r.getSrcDigest(imp.Source))
 	}
@@ -181,11 +201,11 @@ func (r *Runner) restoreExports(
 			}
 		}
 
-		dir := r.sourceDir(exp.Source)
+		dir := r.sourceMountDir(exp.Source)
 		if err := r.Store.Load(key, dir); err != nil {
 			return fmt.Errorf("failed to load: %v", err)
 		}
-		if err := r.addSrc(exp.Source, dir, nil); err != nil {
+		if err := r.addSrc(exp.Source, dir, nil, false); err != nil {
 			return fmt.Errorf("failed to restore %s: %v", exp.Source, err)
 		}
 	}
@@ -196,8 +216,8 @@ func (r *Runner) restoreExports(
 // mounted.
 func (r *Runner) prepareExports(ctx context.Context, step builder.Step) error {
 	for _, exp := range step.Exports {
-		dir := r.sourceDir(exp.Source)
-		if err := r.addSrc(exp.Source, dir, nil); err != nil {
+		dir := r.sourceMountDir(exp.Source)
+		if err := r.addSrc(exp.Source, dir, nil, false); err != nil {
 			return fmt.Errorf("failed to prepare %s: %v", exp.Source, err)
 		}
 	}
@@ -209,8 +229,8 @@ func (r *Runner) prepareExports(ctx context.Context, step builder.Step) error {
 func (r *Runner) saveExports(
 	ctx context.Context, digest string, step builder.Step) error {
 	for _, exp := range step.Exports {
-		dir := r.sourceDir(exp.Source)
-		if err := r.addSrc(exp.Source, dir, nil); err != nil {
+		dir := r.sourceMountDir(exp.Source)
+		if err := r.addSrc(exp.Source, dir, nil, false); err != nil {
 			return err
 		}
 		sourceDigest := r.getSrcDigest(exp.Source)
@@ -228,12 +248,7 @@ func (r *Runner) saveExports(
 // scratch source directory after it is checksummed.
 // TODO: Performance improvement here is to only copy when changed.
 func (r *Runner) runSource(ctx context.Context, src builder.Source) error {
-	srcDir := r.dir(src.Target)
-	destDir := r.sourceDir(src.Name)
-	if err := fileutils.Copy(srcDir, destDir); err != nil {
-		return err
-	}
-	return r.addSrc(src.Name, destDir, src.Files)
+	return r.addSrc(src.Name, src.Target, src.Files, true)
 }
 
 // Run will run a given target. It expects source targets to match:

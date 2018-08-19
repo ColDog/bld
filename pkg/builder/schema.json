@@ -8,7 +8,8 @@
       "type": "string"
     },
     "name": {
-      "type": "string"
+      "type": "string",
+      "pattern": "^[a-zA-Z]+$"
     },
     "volumes": {
       "type": "array",
@@ -28,7 +29,8 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^[a-zA-Z]+$"
         },
         "target": {
           "type": "string"
@@ -40,7 +42,8 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^[a-zA-Z]+$"
         },
         "target": {
           "type": "string"
@@ -57,7 +60,8 @@
       "type": "object",
       "properties": {
         "source": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^[a-zA-Z]+$"
         },
         "mount": {
           "type": "string"
@@ -89,7 +93,8 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^[a-zA-Z]+$"
         },
         "image": {
           "type": "string"

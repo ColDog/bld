@@ -8,6 +8,10 @@ sources:
   - yarn.lock
 - name: app
   target: "."
+  files:
+  - package.json
+  - yarn.lock
+  - index.js
 
 steps:
 - name: install
@@ -50,3 +54,5 @@ steps:
     - node
     - index.js
     workdir: "/usr/src/app"
+    push: true
+    registry_auth: "{{ .Environ.REGISTRY_AUTH }}"

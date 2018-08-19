@@ -23,3 +23,9 @@ Monorepo build tool. With change detection.
 ## Figure Out
 
 - How to pass images from different builds through the pipeline.
+
+## Todo:
+
+- Docs.
+- CI.
+- Figure out image building.

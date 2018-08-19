@@ -1,8 +1,12 @@
 package builder
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
+	"github.com/coldog/bld/pkg/template"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -20,6 +24,15 @@ type Build struct {
 	Steps   []Step   `json:"steps"`
 }
 
+// Digest returns a digest for the build.
+func (b Build) Digest() string {
+	b.ID = ""
+	data, _ := json.Marshal(b)
+	h := sha256.New()
+	h.Write(data)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 // Source will fetch a source if it exists.
 func (b Build) Source(name string) (Source, bool) {
 	for _, src := range b.Sources {
@@ -34,7 +47,11 @@ func (b Build) Source(name string) (Source, bool) {
 func (b Build) Step(name string) (Step, bool) {
 	for _, step := range b.Steps {
 		if step.Name == name {
-			return step, true
+			s := &step
+			if err := template.Struct(s); err != nil {
+				panic(err)
+			}
+			return *s, true
 		}
 	}
 	return Step{}, false
@@ -63,11 +80,13 @@ type Mount struct {
 
 // Image is a committed image.
 type Image struct {
-	Tag        string   `json:"tag"`
-	Entrypoint []string `json:"entrypoint"`
-	Env        []string `json:"env"`
-	Workdir    string   `json:"workdir"`
-	User       string   `json:"user"`
+	Tag          string   `json:"tag"`
+	Entrypoint   []string `json:"entrypoint"`
+	Env          []string `json:"env"`
+	Workdir      string   `json:"workdir"`
+	User         string   `json:"user"`
+	Push         bool     `json:"push"`
+	RegistryAuth string   `json:"registry_auth"`
 }
 
 // Step represents instructions for a step.

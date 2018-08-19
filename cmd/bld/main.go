@@ -35,7 +35,7 @@ func main() {
 
 	flag.StringVar(&target, "target", wd, "target directory for the build")
 	flag.StringVar(&buildSpec, "spec", wd+"/.bld.yaml", "build specification")
-	flag.StringVar(&buildDir, "build-dir", wd+"/.bld", "target directory for the build")
+	flag.StringVar(&buildDir, "build-dir", "/tmp/bld", "target directory for the build")
 	flag.StringVar(&rootDir, "root-dir", wd, "root directory for the build")
 	flag.StringVar(&backend, "backend", "local", "storage backend")
 	flag.UintVar(&level, "v", 0, "log verbosity")

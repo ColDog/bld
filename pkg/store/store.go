@@ -42,8 +42,7 @@ func (s *local) PutKey(id, val string) error {
 	if err := os.MkdirAll(filepath.Dir(key), 0700); err != nil {
 		return err
 	}
-	ioutil.WriteFile(key, []byte(val), 0700)
-	return nil
+	return ioutil.WriteFile(key, []byte(val), 0700)
 }
 
 func (s *local) GetKey(id string) (string, error) {
