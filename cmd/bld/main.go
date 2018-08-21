@@ -23,6 +23,8 @@ func exitErr(msg string, args ...interface{}) {
 
 func main() {
 	var (
+		repoURL     string
+		repoAuth    string
 		buildDir    string
 		buildSpec   string
 		rootDir     string
@@ -32,6 +34,8 @@ func main() {
 	)
 	wd, _ := os.Getwd()
 
+	flag.StringVar(&repoURL, "repo", "localhost:5000", "docker repo url")
+	flag.StringVar(&repoAuth, "repo-auth", "eyJ1c2VybmFtZSI6ImRvY2tlciJ9Cg==", "docker repo auth")
 	flag.StringVar(&buildSpec, "spec", wd+"/.bld.yaml", "build specification")
 	flag.StringVar(&buildDir, "build-dir", "/tmp/bld", "target directory for the build")
 	flag.StringVar(&rootDir, "root-dir", wd, "root directory for the build")
@@ -76,18 +80,28 @@ func main() {
 		exitErr("Invalid store %s", backend)
 	}
 
+	var imageStore store.ImageStore
+	{
+		is, err := store.NewImageStore(repoURL, repoAuth)
+		if err != nil {
+			exitErr("Invalid repo store %s", err)
+		}
+		imageStore = is
+	}
+
 	e := &executor.Executor{}
 	if err := e.Open(); err != nil {
 		exitErr("Failed to initialize executor: %v", err)
 	}
 
 	r := &runner.Runner{
-		Store:    s,
-		BuildDir: buildDir,
-		RootDir:  rootDir,
-		Build:    build,
-		Perform:  e.Execute,
-		Workers:  concurrency,
+		Store:      s,
+		ImageStore: imageStore,
+		BuildDir:   buildDir,
+		RootDir:    rootDir,
+		Build:      build,
+		Perform:    e.Execute,
+		Workers:    concurrency,
 	}
 
 	if err := r.Run(context.Background()); err != nil {

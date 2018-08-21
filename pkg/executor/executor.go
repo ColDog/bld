@@ -1,9 +1,7 @@
 package executor
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -126,53 +124,18 @@ func (e *Executor) startContainer(
 	return ct.ID, nil
 }
 
-func (e *Executor) commit(ctx context.Context, id string, image builder.Image) error {
-	var ref string
-	{
-		id, err := e.client.ContainerCommit(ctx, id, types.ContainerCommitOptions{
-			Reference: image.Tag,
-			Config: &container.Config{
-				Image:      image.Tag,
-				Entrypoint: strslice.StrSlice(image.Entrypoint),
-				WorkingDir: image.Workdir,
-				Env:        image.Env,
-				User:       image.User,
-			},
-		})
-		if err != nil {
-			return err
-		}
-		ref = id.ID
-	}
-
-	if image.Push {
-		logger := log.ContextGetLogger(ctx)
-
-		logger.Printf("> pushing image %s sha=%s", image.Tag, ref)
-		reader, err := e.client.ImagePush(ctx, image.Tag, types.ImagePushOptions{
-			RegistryAuth: image.RegistryAuth,
-		})
-		if err != nil {
-			return err
-		}
-		return readPush(ctx, reader)
-	}
-
-	return nil
-}
-
-func readPush(ctx context.Context, reader io.ReadCloser) error {
-	scan := bufio.NewScanner(reader)
-	for scan.Scan() {
-		data := map[string]interface{}{}
-		if err := json.Unmarshal(scan.Bytes(), &data); err != nil {
-			return err
-		}
-		if err, ok := data["error"]; ok {
-			return fmt.Errorf("%v", err)
-		}
-	}
-	return nil
+func (e *Executor) commit(ctx context.Context, id, name, digest string, image builder.Image) error {
+	_, err := e.client.ContainerCommit(ctx, id, types.ContainerCommitOptions{
+		Reference: name + ":" + digest,
+		Config: &container.Config{
+			Image:      name + ":" + digest,
+			Entrypoint: strslice.StrSlice(image.Entrypoint),
+			WorkingDir: image.Workdir,
+			Env:        image.Env,
+			User:       image.User,
+		},
+	})
+	return err
 }
 
 func (e *Executor) remove(ctx context.Context, id string) error {
@@ -245,10 +208,8 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 		}
 	}
 
-	if step.Save.Tag != "" {
-		if err := e.commit(ctx, id, step.Save); err != nil {
-			return err
-		}
+	if err := e.commit(ctx, id, step.Name, step.Digest, step.Save); err != nil {
+		return err
 	}
 	if err := e.remove(ctx, id); err != nil {
 		return err

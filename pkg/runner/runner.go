@@ -19,7 +19,9 @@ import (
 
 // Runner will run a specific build.
 type Runner struct {
-	Store    store.Store
+	Store      store.Store
+	ImageStore store.ImageStore
+
 	BuildDir string
 	RootDir  string
 	Build    builder.Build
@@ -161,6 +163,12 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	if _, err := r.Store.GetKey(
 		"step/" + r.Build.Name + "/" + step.Name + "/" + digest,
 	); err == nil {
+		// Save the image.
+		logger.V(3).Printf("pulling image %s", digest)
+		if err := r.ImageStore.Restore(ctx, step.Name, digest); err != nil {
+			return err
+		}
+
 		logger.V(5).Printf("restoring exports digest=%s step=%+v", digest, step)
 		logger.Printf("> %s: step cached (%v)", step.Name, time.Since(start))
 		return r.restoreExports(ctx, digest, step)
@@ -173,6 +181,7 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 
 	ctx = log.ContextWithLogger(ctx, logger)
 	exec := builder.StepExec{
+		Digest:     digest,
 		Step:       step,
 		SourceDirs: r.collectSources(),
 		BuildDir:   r.BuildDir,
@@ -181,6 +190,12 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	}
 	logger.V(5).Printf("executing step: %+v", exec)
 	if err := r.Perform(ctx, exec); err != nil {
+		return err
+	}
+
+	// Save the image.
+	logger.V(3).Printf("saving image %s", digest)
+	if err := r.ImageStore.Save(ctx, step.Name, digest); err != nil {
 		return err
 	}
 

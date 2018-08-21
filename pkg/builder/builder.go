@@ -80,13 +80,10 @@ type Mount struct {
 
 // Image is a committed image.
 type Image struct {
-	Tag          string   `json:"tag"`
-	Entrypoint   []string `json:"entrypoint"`
-	Env          []string `json:"env"`
-	Workdir      string   `json:"workdir"`
-	User         string   `json:"user"`
-	Push         bool     `json:"push"`
-	RegistryAuth string   `json:"registry_auth"`
+	Entrypoint []string `json:"entrypoint"`
+	Env        []string `json:"env"`
+	Workdir    string   `json:"workdir"`
+	User       string   `json:"user"`
 }
 
 // Step represents instructions for a step.
@@ -115,6 +112,7 @@ type Step struct {
 type StepExec struct {
 	Step
 
+	Digest     string
 	BuildID    string
 	BuildDir   string
 	RootDir    string
