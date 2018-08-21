@@ -33,7 +33,7 @@ func test(
 	t *testing.T, build builder.Build,
 	fn func(ctx context.Context, exec builder.StepExec) error) error {
 
-	log.Level(10)
+	log.Level(4)
 
 	r := &Runner{
 		Store:    store.NewLocalStore(tmp),

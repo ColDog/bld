@@ -1,7 +1,9 @@
 package executor
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -147,12 +149,29 @@ func (e *Executor) commit(ctx context.Context, id string, image builder.Image) e
 		logger := log.ContextGetLogger(ctx)
 
 		logger.Printf("> pushing image %s sha=%s", image.Tag, ref)
-		_, err := e.client.ImagePush(ctx, image.Tag, types.ImagePushOptions{
+		reader, err := e.client.ImagePush(ctx, image.Tag, types.ImagePushOptions{
 			RegistryAuth: image.RegistryAuth,
 		})
-		return err
+		if err != nil {
+			return err
+		}
+		return readPush(ctx, reader)
 	}
 
+	return nil
+}
+
+func readPush(ctx context.Context, reader io.ReadCloser) error {
+	scan := bufio.NewScanner(reader)
+	for scan.Scan() {
+		data := map[string]interface{}{}
+		if err := json.Unmarshal(scan.Bytes(), &data); err != nil {
+			return err
+		}
+		if err, ok := data["error"]; ok {
+			return fmt.Errorf("%v", err)
+		}
+	}
 	return nil
 }
 
@@ -174,6 +193,11 @@ func (e *Executor) waitForExit(ctx context.Context, id string) (int, error) {
 
 func (e *Executor) entrypointFile(step builder.StepExec) string {
 	return step.Name + "_step.sh"
+}
+
+// Pull will pull an image.
+func (e *Executor) Pull(ctx context.Context, tag string) error {
+	return e.pullImage(ctx, tag)
 }
 
 // Execute will execute the provided step.

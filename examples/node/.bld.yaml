@@ -49,10 +49,8 @@ steps:
   - source: modules
     mount: "/mnt/node_modules"
   save:
-    tag: examples/node
+    tag: coldog/bld-examples-node
     entrypoint:
     - node
     - index.js
     workdir: "/usr/src/app"
-    push: true
-    registry_auth: "{{ .Environ.REGISTRY_AUTH }}"

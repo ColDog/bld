@@ -23,7 +23,6 @@ func exitErr(msg string, args ...interface{}) {
 
 func main() {
 	var (
-		target      string
 		buildDir    string
 		buildSpec   string
 		rootDir     string
@@ -33,7 +32,6 @@ func main() {
 	)
 	wd, _ := os.Getwd()
 
-	flag.StringVar(&target, "target", wd, "target directory for the build")
 	flag.StringVar(&buildSpec, "spec", wd+"/.bld.yaml", "build specification")
 	flag.StringVar(&buildDir, "build-dir", "/tmp/bld", "target directory for the build")
 	flag.StringVar(&rootDir, "root-dir", wd, "root directory for the build")

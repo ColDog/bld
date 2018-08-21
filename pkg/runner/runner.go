@@ -9,10 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coldog/bld/pkg/fileutils"
-
 	"github.com/coldog/bld/pkg/builder"
 	"github.com/coldog/bld/pkg/content"
+	"github.com/coldog/bld/pkg/fileutils"
 	"github.com/coldog/bld/pkg/graph"
 	"github.com/coldog/bld/pkg/log"
 	"github.com/coldog/bld/pkg/store"
@@ -64,24 +63,28 @@ func (r *Runner) addSrc(name, target string, files []string, copy bool) error {
 				return err
 			}
 		}
-
 	}
 
 	// Copy files to a workspace if copy is set and reset the target equal to
 	// the new directory.
 	if copy {
-		srcDir := r.dir(target)
 		destDir := r.sourceWorkDir(digest)
-		r.logger.V(4).Printf("copying source target=%s dest=%s files=%s", target, destDir, files)
+		r.logger.V(4).Printf(
+			"copying source target=%s dest=%s files=%s",
+			target, destDir, files,
+		)
 		if _, err := os.Stat(destDir); os.IsNotExist(err) {
-			if err := fileutils.Copy(srcDir, destDir, files); err != nil {
+			if err := fileutils.Copy(target, destDir, files); err != nil {
 				return err
 			}
 		}
 		target = destDir
 	}
 
-	r.logger.V(4).Printf("adding source src=%s target=%s digest=%s", name, target, digest)
+	r.logger.V(3).Printf(
+		"adding source dir src=%s target=%s digest=%s",
+		name, target, digest,
+	)
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	if r.sourceDigests == nil {
@@ -155,12 +158,14 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	logger := r.logger.Prefix(r.Build.Name + "/" + step.Name)
 	logger.Printf("STEP: %s (%s)", step.Name, digest)
 
-	if _, err := r.Store.GetKey("step/" + r.Build.Name + "/" + step.Name + "/" + digest); err == nil {
-		logger.V(4).Printf("restoring exports digest=%s step=%+v", digest, step)
+	if _, err := r.Store.GetKey(
+		"step/" + r.Build.Name + "/" + step.Name + "/" + digest,
+	); err == nil {
+		logger.V(5).Printf("restoring exports digest=%s step=%+v", digest, step)
 		logger.Printf("> %s: step cached (%v)", step.Name, time.Since(start))
 		return r.restoreExports(ctx, digest, step)
 	}
-	logger.V(4).Printf("running step digest=%s step=%+v", digest, step)
+	logger.V(5).Printf("running step digest=%s step=%+v", digest, step)
 
 	if err := r.prepareExports(ctx, step); err != nil {
 		return err
@@ -174,12 +179,12 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 		BuildID:    r.Build.ID,
 		RootDir:    r.RootDir,
 	}
-	logger.V(4).Printf("executing step: %+v", exec)
+	logger.V(5).Printf("executing step: %+v", exec)
 	if err := r.Perform(ctx, exec); err != nil {
 		return err
 	}
 
-	logger.V(4).Printf("saving exports %+v", step.Exports)
+	logger.V(5).Printf("saving exports %+v", step.Exports)
 	if err := r.saveExports(ctx, digest, step); err != nil {
 		return err
 	}
@@ -197,7 +202,7 @@ func (r *Runner) restoreExports(
 			var err error
 			key, err = r.Store.GetKey("export/" + exp.Source + "/" + digest)
 			if err != nil {
-				return fmt.Errorf("failed to get export %s: %v", exp.Source, err)
+				return fmt.Errorf("failed export %s: %v", exp.Source, err)
 			}
 		}
 
@@ -234,7 +239,9 @@ func (r *Runner) saveExports(
 			return err
 		}
 		sourceDigest := r.getSrcDigest(exp.Source)
-		if err := r.Store.PutKey("export/"+exp.Source+"/"+digest, sourceDigest); err != nil {
+		if err := r.Store.PutKey(
+			"export/"+exp.Source+"/"+digest, sourceDigest,
+		); err != nil {
 			return fmt.Errorf("failed to get export %s: %v", exp.Source, err)
 		}
 		if err := r.Store.Save(sourceDigest, dir); err != nil {
@@ -248,7 +255,11 @@ func (r *Runner) saveExports(
 // scratch source directory after it is checksummed.
 // TODO: Performance improvement here is to only copy when changed.
 func (r *Runner) runSource(ctx context.Context, src builder.Source) error {
-	return r.addSrc(src.Name, src.Target, src.Files, true)
+	r.logger.V(3).Printf(
+		"adding source name=%s target=%s",
+		src.Name, r.dir(src.Target),
+	)
+	return r.addSrc(src.Name, r.dir(src.Target), src.Files, true)
 }
 
 // Run will run a given target. It expects source targets to match:
@@ -303,7 +314,7 @@ func (r *Runner) Run(ctx context.Context) error {
 	wg.Add(r.Workers)
 
 	log.Printf("starting build %s", r.Build.ID)
-	log.V(4).Printf("%+v", r.Build)
+	log.V(5).Printf("%+v", r.Build)
 
 	s.Solve()
 
@@ -311,7 +322,7 @@ func (r *Runner) Run(ctx context.Context) error {
 		go func(i int) {
 			log := log.Prefix(fmt.Sprintf("%s/%d", r.Build.ID, i))
 			defer wg.Done()
-			defer log.V(4).Printf("worker exited %d", i)
+			defer log.V(2).Printf("worker exited id=%d", i)
 
 			for {
 				id, err := s.Select(ctx)
@@ -322,14 +333,14 @@ func (r *Runner) Run(ctx context.Context) error {
 					errs <- err
 					return
 				}
-				log.V(4).Printf("starting step %s", id)
+				log.V(2).Printf("starting step id=%s", id)
 				err = r.run(ctx, id)
 				if err != nil {
-					log.V(4).Printf("step failed %s: %v", id, err)
+					log.V(2).Printf("step failed id=%s: %v", id, err)
 					errs <- err
 					return
 				}
-				log.V(4).Printf("finished step %s", id)
+				log.V(2).Printf("finished step id=%s", id)
 				s.Done(id)
 			}
 		}(i)
