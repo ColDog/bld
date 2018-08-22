@@ -80,7 +80,9 @@ type Mount struct {
 
 // Image is a committed image.
 type Image struct {
+	Tag        string   `json:"tag"`
 	Entrypoint []string `json:"entrypoint"`
+	Command    []string `json:"command"`
 	Env        []string `json:"env"`
 	Workdir    string   `json:"workdir"`
 	User       string   `json:"user"`
@@ -103,8 +105,8 @@ type Step struct {
 	Volumes []Mount `json:"volumes"`
 	Exports []Mount `json:"exports"`
 
-	// Save will commit a built container.
-	Save Image `json:"save"`
+	// Build will commit a built container.
+	Build *Image `json:"build"`
 }
 
 // StepExec is the set of instructions needed for an executor to perform the

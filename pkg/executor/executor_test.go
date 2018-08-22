@@ -30,6 +30,7 @@ func test(t *testing.T, step builder.StepExec) {
 
 func TestEcho(t *testing.T) {
 	test(t, builder.StepExec{
+		Digest: "sflaskdjflksjafd",
 		Step: builder.Step{
 			Name:     "test",
 			Image:    "alpine",
@@ -52,6 +53,7 @@ func TestMount(t *testing.T) {
 	println(">> tmp", tmp, cacheTmp)
 
 	test(t, builder.StepExec{
+		Digest: "asflaslkjflaskjdf",
 		Step: builder.Step{
 			Name:     "test",
 			Image:    "alpine",
@@ -72,6 +74,7 @@ func TestMountExport(t *testing.T) {
 	require.Nil(t, err)
 
 	test(t, builder.StepExec{
+		Digest: "asfkjaslkdjfsadf",
 		Step: builder.Step{
 			Name:     "test",
 			Image:    "alpine",
@@ -91,12 +94,12 @@ func TestMountExport(t *testing.T) {
 
 func TestCommit(t *testing.T) {
 	test(t, builder.StepExec{
+		Digest: "asflkjsalkfjasfd",
 		Step: builder.Step{
 			Name:     "test",
 			Image:    "alpine",
 			Commands: []string{"echo 'hello' > /test.txt"},
-			Save: builder.Image{
-				Tag:        "test",
+			Build: &builder.Image{
 				Entrypoint: []string{"/bin/sh"},
 			},
 		},

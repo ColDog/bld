@@ -13,6 +13,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockImageStore struct{}
+
+func (mockImageStore) Save(ctx context.Context, name, id string) error    { return nil }
+func (mockImageStore) Restore(ctx context.Context, name, id string) error { return nil }
+
 var (
 	wd   string
 	tmp  string
@@ -36,12 +41,13 @@ func test(
 	log.Level(4)
 
 	r := &Runner{
-		Store:    store.NewLocalStore(tmp),
-		BuildDir: tmp,
-		RootDir:  wd,
-		Build:    build,
-		Workers:  2,
-		Perform:  fn,
+		ImageStore: mockImageStore{},
+		Store:      store.NewLocalStore(tmp),
+		BuildDir:   tmp,
+		RootDir:    wd,
+		Build:      build,
+		Workers:    2,
+		Perform:    fn,
 	}
 	return r.Run(context.Background())
 }

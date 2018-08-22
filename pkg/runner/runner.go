@@ -163,10 +163,12 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	if _, err := r.Store.GetKey(
 		"step/" + r.Build.Name + "/" + step.Name + "/" + digest,
 	); err == nil {
-		// Save the image.
-		logger.V(3).Printf("pulling image %s", digest)
-		if err := r.ImageStore.Restore(ctx, step.Name, digest); err != nil {
-			return err
+		if step.Build != nil {
+			// Restore the built image.
+			logger.V(3).Printf("pulling image %s", digest)
+			if err := r.ImageStore.Restore(ctx, step.Name, digest); err != nil {
+				return err
+			}
 		}
 
 		logger.V(5).Printf("restoring exports digest=%s step=%+v", digest, step)
@@ -193,10 +195,11 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 		return err
 	}
 
-	// Save the image.
-	logger.V(3).Printf("saving image %s", digest)
-	if err := r.ImageStore.Save(ctx, step.Name, digest); err != nil {
-		return err
+	if step.Build != nil {
+		logger.V(3).Printf("saving image %s", digest)
+		if err := r.ImageStore.Save(ctx, step.Name, digest); err != nil {
+			return err
+		}
 	}
 
 	logger.V(5).Printf("saving exports %+v", step.Exports)

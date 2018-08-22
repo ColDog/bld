@@ -124,18 +124,29 @@ func (e *Executor) startContainer(
 	return ct.ID, nil
 }
 
-func (e *Executor) commit(ctx context.Context, id, name, digest string, image builder.Image) error {
-	_, err := e.client.ContainerCommit(ctx, id, types.ContainerCommitOptions{
-		Reference: name + ":" + digest,
+func (e *Executor) commit(
+	ctx context.Context,
+	id string,
+	step builder.StepExec,
+) error {
+	ref := step.Name + ":" + step.Digest
+	if _, err := e.client.ContainerCommit(ctx, id, types.ContainerCommitOptions{
+		Reference: ref,
 		Config: &container.Config{
-			Image:      name + ":" + digest,
-			Entrypoint: strslice.StrSlice(image.Entrypoint),
-			WorkingDir: image.Workdir,
-			Env:        image.Env,
-			User:       image.User,
+			Image:      ref,
+			Entrypoint: strslice.StrSlice(step.Build.Entrypoint),
+			Cmd:        strslice.StrSlice(step.Build.Command),
+			WorkingDir: step.Build.Workdir,
+			Env:        step.Build.Env,
+			User:       step.Build.User,
 		},
-	})
-	return err
+	}); err != nil {
+		return err
+	}
+	if step.Build.Tag != "" {
+		return e.client.ImageTag(ctx, ref, step.Build.Tag)
+	}
+	return nil
 }
 
 func (e *Executor) remove(ctx context.Context, id string) error {
@@ -179,7 +190,8 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 	}
 
 	logger.V(5).Printf("building entrypoint entrypoint=%s", entrypoint)
-	if err := buildEntrypoint(execDir+"/"+entrypoint, step.Commands); err != nil {
+	if err := buildEntrypoint(
+		execDir+"/"+entrypoint, step.Commands); err != nil {
 		return err
 	}
 
@@ -208,8 +220,10 @@ func (e *Executor) Execute(ctx context.Context, step builder.StepExec) error {
 		}
 	}
 
-	if err := e.commit(ctx, id, step.Name, step.Digest, step.Save); err != nil {
-		return err
+	if step.Build != nil {
+		if err := e.commit(ctx, id, step); err != nil {
+			return err
+		}
 	}
 	if err := e.remove(ctx, id); err != nil {
 		return err
