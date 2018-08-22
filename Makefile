@@ -2,10 +2,18 @@ test:
 	go test -cover ./pkg/...
 
 test-examples: install
-	bld -v 10 -root-dir $$PWD/examples/node -spec $$PWD/examples/node/.bld.yaml
+	@echo "testing examples/node"
+	@docker run --rm -it \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v /tmp/:/tmp \
+		-v $$PWD/examples/node:/mnt \
+		--workdir /mnt \
+		coldog/bld:latest
 
 install:
-	go install ./cmd/bld
+	@echo "installing..."
+	@go install ./cmd/bld
+	@bld
 
 save-schema:
 	@pkg/builder/save-schema.sh

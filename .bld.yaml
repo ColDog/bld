@@ -66,8 +66,6 @@ steps:
   commands:
   - apk add --no-cache ca-certificates
   - cp /mnt/bld /bin/bld
-  save:
-    tag: "docker.io/coldog/bld:{{ .Git.ShaShort }}"
+  build:
+    tag: coldog/bld:latest
     entrypoint: ["/bin/bld"]
-    push: true
-    registry_auth: "{{ .Environ.DOCKER_AUTH }}"

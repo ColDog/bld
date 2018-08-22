@@ -48,7 +48,7 @@ steps:
     mount: "/mnt/app"
   - source: modules
     mount: "/mnt/node_modules"
-  save:
+  build:
     tag: coldog/bld-examples-node
     entrypoint:
     - node
