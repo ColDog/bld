@@ -274,7 +274,7 @@ func buildEntrypoint(file string, commands []string) error {
 		return fmt.Errorf("executor: could not build entrypoint: %v", err)
 	}
 	defer entrypoint.Close()
-	entrypoint.WriteString("#!/bin/sh\n")
+	entrypoint.WriteString("#!/bin/sh\nset -e\n")
 	for _, cmd := range commands {
 		entrypoint.WriteString(cmd + "\n")
 	}

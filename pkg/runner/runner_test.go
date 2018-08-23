@@ -57,12 +57,12 @@ func TestRunner(t *testing.T) {
 		ID:   "10",
 		Name: "test",
 		Sources: []builder.Source{
-			{Name: "r1", Target: "testdata"},
+			{Name: "test+r1", Target: "testdata"},
 		},
 		Steps: []builder.Step{
 			{
 				Name:    "s1",
-				Imports: []builder.Mount{{Source: "r1", Mount: "/usr/src/app"}},
+				Imports: []builder.Mount{{Source: "test+r1", Mount: "/usr/src/app"}},
 				Exports: []builder.Mount{{Source: "r2", Mount: "/usr/src/app2"}},
 			},
 			{

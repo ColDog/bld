@@ -1,0 +1,21 @@
+name: sub
+
+sources:
+- name: deps
+  target: "."
+  files:
+  - package.json
+  - yarn.lock
+
+steps:
+- name: install
+  image: node:8-alpine
+  commands:
+  - yarn install --modules-folder /usr/src/node_modules
+  workdir: "/usr/src/app"
+  imports:
+  - source: deps
+    mount: "/usr/src/app"
+  exports:
+  - source: modules
+    mount: "/usr/src/node_modules"

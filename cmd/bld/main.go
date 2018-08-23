@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/coldog/bld/pkg/builder"
@@ -12,7 +11,6 @@ import (
 	"github.com/coldog/bld/pkg/log"
 	"github.com/coldog/bld/pkg/runner"
 	"github.com/coldog/bld/pkg/store"
-	"github.com/ghodss/yaml"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -48,26 +46,11 @@ func main() {
 
 	var build builder.Build
 	{
-		f, err := os.Open(buildSpec)
+		b, err := builder.Read(buildSpec)
 		if err != nil {
-			exitErr("Failed to open: %v", err)
+			exitErr("Failed to read (%s): %v", buildSpec, err)
 		}
-		data, err := ioutil.ReadAll(f)
-		if err != nil {
-			exitErr("Failed to read: %v", err)
-		}
-		json, err := yaml.YAMLToJSON(data)
-		if err != nil {
-			exitErr("Failed to decode (%s): %v", buildSpec, err)
-		}
-		err = builder.Validate(json)
-		if err != nil {
-			exitErr("Invalid schema (%s): %v", buildSpec, err)
-		}
-		err = yaml.Unmarshal(data, &build)
-		if err != nil {
-			exitErr("Failed to decode (%s): %v", buildSpec, err)
-		}
+		build = b
 	}
 
 	build.ID = uuid.NewV4().String()

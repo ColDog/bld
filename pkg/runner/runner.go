@@ -15,6 +15,7 @@ import (
 	"github.com/coldog/bld/pkg/graph"
 	"github.com/coldog/bld/pkg/log"
 	"github.com/coldog/bld/pkg/store"
+	"github.com/davecgh/go-spew/spew"
 )
 
 // Runner will run a specific build.
@@ -149,7 +150,7 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	start := time.Now()
 
 	imports := []string{
-		r.Build.Digest(),
+		// step.Digest(),
 	}
 	for _, imp := range step.Imports {
 		imports = append(imports, r.getSrcDigest(imp.Source))
@@ -161,7 +162,7 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	logger.Printf("STEP: %s (%s)", step.Name, digest)
 
 	if _, err := r.Store.GetKey(
-		"step/" + r.Build.Name + "/" + step.Name + "/" + digest,
+		"step/" + digest,
 	); err == nil {
 		if step.Build != nil {
 			// Restore the built image.
@@ -208,7 +209,7 @@ func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	}
 
 	logger.Printf("> %s: step finished (%v)", step.Name, time.Since(start))
-	return r.Store.PutKey("step/"+r.Build.Name+"/"+step.Name+"/"+digest, "")
+	return r.Store.PutKey("step/"+digest, "")
 }
 
 // RestoreExports will mount exports from the store.
@@ -218,7 +219,7 @@ func (r *Runner) restoreExports(
 		var key string
 		{
 			var err error
-			key, err = r.Store.GetKey("export/" + exp.Source + "/" + digest)
+			key, err = r.Store.GetKey("export/" + digest)
 			if err != nil {
 				return fmt.Errorf("failed export %s: %v", exp.Source, err)
 			}
@@ -258,7 +259,7 @@ func (r *Runner) saveExports(
 		}
 		sourceDigest := r.getSrcDigest(exp.Source)
 		if err := r.Store.PutKey(
-			"export/"+exp.Source+"/"+digest, sourceDigest,
+			"export/"+digest, sourceDigest,
 		); err != nil {
 			return fmt.Errorf("failed to get export %s: %v", exp.Source, err)
 		}
@@ -332,7 +333,7 @@ func (r *Runner) Run(ctx context.Context) error {
 	wg.Add(r.Workers)
 
 	log.Printf("starting build %s", r.Build.ID)
-	log.V(5).Printf("%+v", r.Build)
+	log.V(5).Printf("%s", spew.Sdump(r.Build))
 
 	s.Solve()
 

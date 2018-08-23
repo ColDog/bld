@@ -1,0 +1,28 @@
+name: node
+requires:
+- testdata/require.yaml
+
+sources:
+- name: deps
+  target: "."
+  files:
+  - package.json
+  - yarn.lock
+- name: app
+  target: "."
+  files:
+  - package.json
+  - yarn.lock
+  - index.js
+
+steps:
+- name: install
+  image: node:8-alpine
+  commands:
+  - yarn install --modules-folder /usr/src/node_modules
+  workdir: "/usr/src/app"
+  imports:
+  - source: deps
+    mount: "/usr/src/app"
+  - source: sub+modules
+    mount: "/usr/src/app"

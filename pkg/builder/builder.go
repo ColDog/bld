@@ -19,18 +19,11 @@ type Build struct {
 	// Name represents a human name given to the build target.
 	Name string `json:"name"`
 
+	Requires []string `json:"requires"`
+
 	Volumes []Volume `json:"volumes"`
 	Sources []Source `json:"sources"`
 	Steps   []Step   `json:"steps"`
-}
-
-// Digest returns a digest for the build.
-func (b Build) Digest() string {
-	b.ID = ""
-	data, _ := json.Marshal(b)
-	h := sha256.New()
-	h.Write(data)
-	return hex.EncodeToString(h.Sum(nil))
 }
 
 // Source will fetch a source if it exists.
@@ -107,6 +100,14 @@ type Step struct {
 
 	// Build will commit a built container.
 	Build *Image `json:"build"`
+}
+
+// Digest returns a digest for the build.
+func (s Step) Digest() string {
+	data, _ := json.Marshal(s)
+	h := sha256.New()
+	h.Write(data)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // StepExec is the set of instructions needed for an executor to perform the
