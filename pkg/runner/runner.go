@@ -149,9 +149,7 @@ func (r *Runner) sourceWorkDir(digest string) string {
 func (r *Runner) runStep(ctx context.Context, step builder.Step) error {
 	start := time.Now()
 
-	imports := []string{
-		// step.Digest(),
-	}
+	imports := []string{step.Digest()}
 	for _, imp := range step.Imports {
 		imports = append(imports, r.getSrcDigest(imp.Source))
 	}

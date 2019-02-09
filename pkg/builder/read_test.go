@@ -11,12 +11,12 @@ func TestRead(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("StepExists", func(t *testing.T) {
-		_, exists := b.Step("sub+install")
+		_, exists := b.Step("sub_install")
 		require.True(t, exists)
 	})
 
 	t.Run("SourceExists", func(t *testing.T) {
-		_, exists := b.Source("sub+deps")
+		_, exists := b.Source("sub_deps")
 		require.True(t, exists)
 	})
 }

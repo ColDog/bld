@@ -21,8 +21,6 @@ func exitErr(msg string, args ...interface{}) {
 
 func main() {
 	var (
-		repoURL     string
-		repoAuth    string
 		buildDir    string
 		buildSpec   string
 		rootDir     string
@@ -32,12 +30,10 @@ func main() {
 	)
 	wd, _ := os.Getwd()
 
-	flag.StringVar(&repoURL, "repo", "localhost:5000", "docker repo url")
-	flag.StringVar(&repoAuth, "repo-auth", "eyJ1c2VybmFtZSI6ImRvY2tlciJ9Cg==", "docker repo auth")
 	flag.StringVar(&buildSpec, "spec", wd+"/.bld.yaml", "build specification")
 	flag.StringVar(&buildDir, "build-dir", "/tmp/bld", "target directory for the build")
 	flag.StringVar(&rootDir, "root-dir", wd, "root directory for the build")
-	flag.StringVar(&backend, "backend", "local", "storage backend")
+	flag.StringVar(&backend, "backend", "local", "storage backend options: [local]")
 	flag.UintVar(&level, "v", 0, "log verbosity")
 	flag.IntVar(&concurrency, "concurrency", 5, "maximum concurrency")
 	flag.Parse()
@@ -65,7 +61,7 @@ func main() {
 
 	var imageStore store.ImageStore
 	{
-		is, err := store.NewImageStore(repoURL, repoAuth)
+		is, err := store.NewImageStore(s)
 		if err != nil {
 			exitErr("Invalid repo store %s", err)
 		}

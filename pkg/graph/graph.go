@@ -13,7 +13,9 @@ import (
 var ErrFinished = errors.New("selector finished")
 
 // Solver is a graph solver. It takes a given build and returns units of work to
-// goroutines.
+// goroutines. It is aware of the build graph and the pieces of the build
+// pipeline, specifically it is aware that sources control when builds are
+// completed.
 type Solver struct {
 	Build   builder.Build
 	Workers int

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,6 +16,9 @@ func NewLocalStore(dir string) Store { return &local{dir: dir} }
 type Store interface {
 	Save(id, dir string) error
 	Load(id, dir string) error
+
+	SaveStream(id string, stream io.ReadCloser) error
+	LoadStream(id string) (io.ReadCloser, error)
 
 	PutKey(key, val string) error
 	GetKey(key string) (string, error)
@@ -35,6 +39,23 @@ func (s *local) Save(id, dir string) error {
 func (s *local) Load(id, dir string) error {
 	os.MkdirAll(dir, 0700)
 	return fileutils.Untar(s.dir+"/store/content/"+id, dir)
+}
+
+func (s *local) SaveStream(id string, stream io.ReadCloser) error {
+	key := s.dir + "/store/content/" + id
+	if err := os.MkdirAll(filepath.Dir(key), 0700); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(key, os.O_CREATE|os.O_RDWR, 0700)
+	if err != nil {
+		return err
+	}
+	return fileutils.CopyStream(stream, f)
+}
+
+func (s *local) LoadStream(id string) (io.ReadCloser, error) {
+	key := s.dir + "/store/content/" + id
+	return os.Open(key)
 }
 
 func (s *local) PutKey(id, val string) error {

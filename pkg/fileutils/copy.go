@@ -1,6 +1,7 @@
 package fileutils
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,4 +27,21 @@ func Copy(src, dest string, files []string) error {
 	cmd := exec.Command("cp", "-r", src+"/.", dest+"/.")
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+// CopyStream handles multiple read and write closers.
+func CopyStream(src io.ReadCloser, dst io.WriteCloser) (err error) {
+	defer func() {
+		if serr := src.Close(); serr != nil {
+			err = serr
+		}
+	}()
+	defer func() {
+		if ferr := dst.Close(); ferr != nil {
+			err = ferr
+		}
+	}()
+
+	_, err = io.Copy(dst, src)
+	return err
 }

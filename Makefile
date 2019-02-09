@@ -1,3 +1,5 @@
+version=$(shell cat version)
+
 test:
 	go test -cover ./pkg/...
 
@@ -17,3 +19,8 @@ install:
 
 save-schema:
 	@pkg/builder/save-schema.sh
+
+release: install
+	docker tag coldog/bld:latest coldog/bld:$(version)
+	docker push coldog/bld:latest
+	docker push coldog/bld:$(version)

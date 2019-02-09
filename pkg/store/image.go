@@ -1,13 +1,11 @@
 package store
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
-	"fmt"
 	"io"
+	"io/ioutil"
 
-	"github.com/docker/docker/api/types"
+	"github.com/coldog/bld/pkg/log"
 	"github.com/moby/moby/client"
 )
 
@@ -15,69 +13,50 @@ import (
 type ImageStore interface {
 	// Save will save a given image from the docker daemon.
 	Save(ctx context.Context, name, id string) error
-	// Restore will restore a given image from the docker repo..
+	// Restore will restore a given image from the docker repo.
 	Restore(ctx context.Context, name, id string) error
 }
 
-// NewImageStore instantiates a new store.
-func NewImageStore(repo, auth string) (ImageStore, error) {
+// NewImageStore instantiates a new store given a store implementation. This
+// will use docker load and docker save to store the images as tar archives in
+// the provided store.
+func NewImageStore(store Store) (ImageStore, error) {
 	client, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
 	}
 	return &imageStore{
-		repo:   repo,
-		auth:   auth,
+		store:  store,
 		client: client,
 	}, nil
 }
 
 type imageStore struct {
-	repo   string
-	auth   string
+	store  Store
 	client *client.Client
 }
 
 func (s *imageStore) Save(ctx context.Context, name, id string) error {
-	repoID := s.repo + "/" + name + ":" + id
-	if err := s.client.ImageTag(ctx, name+":"+id, repoID); err != nil {
-		return err
-	}
-	r, err := s.client.ImagePush(ctx, repoID, types.ImagePushOptions{
-		RegistryAuth: s.auth,
-	})
+	log.ContextGetLogger(ctx).V(3).Printf("image store: saving image id=%s", id)
+
+	imageID := name + ":" + id
+	r, err := s.client.ImageSave(ctx, []string{imageID})
 	if err != nil {
 		return err
 	}
-	return read(ctx, r)
+	return s.store.SaveStream(id, r)
 }
 
 func (s *imageStore) Restore(ctx context.Context, name, id string) error {
-	repoID := s.repo + "/" + name + ":" + id
-	image := name + ":" + id
-	r, perr := s.client.ImagePull(ctx, repoID, types.ImagePullOptions{
-		RegistryAuth: s.auth,
-	})
-	if perr != nil {
-		return perr
-	}
-	if err := read(ctx, r); err != nil {
+	log.ContextGetLogger(ctx).V(3).Printf("image store: restoring image id=%s", id)
+
+	r, err := s.store.LoadStream(id)
+	if err != nil {
 		return err
 	}
-	return s.client.ImageTag(ctx, repoID, image)
-}
 
-func read(ctx context.Context, reader io.ReadCloser) error {
-	defer reader.Close()
-	scan := bufio.NewScanner(reader)
-	for scan.Scan() {
-		data := map[string]interface{}{}
-		if err := json.Unmarshal(scan.Bytes(), &data); err != nil {
-			return err
-		}
-		if err, ok := data["error"]; ok {
-			return fmt.Errorf("%v", err)
-		}
-	}
-	return nil
+	res, err := s.client.ImageLoad(ctx, r, true)
+	io.Copy(ioutil.Discard, res.Body)
+	res.Body.Close()
+	return err
 }

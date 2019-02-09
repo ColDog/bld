@@ -11,3 +11,5 @@ Fast, repeatable and cacheable builds using docker.
 * [Building](docs/builds.md)
 
 ## Installation
+
+Bld can be run as a docker container.

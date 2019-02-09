@@ -5,21 +5,21 @@ This describes the behaviour of the build tool step by step.
 Initializaton:
 
 1. Submit the build to the graph module.
-  - Graph module handles dependency resolution between the items.
-  - It uses a breadth first traversal to select which steps to run.
+  - Graph module handles dependency resolution between the items. using a
+    breadth first traversal to select which steps to run.
 2. Start workers to handle steps to run.
 
 Worker loop:
 
 - Receive a unit of work from the graph:
 - If it's a source, copy the source to a workspace directory that is inside
-  the build directory. Also digest the given source and save it to a map.
+  the build directory. Also digest the given source and save this digest.
 - If it's a step: run the step execution.
 
 Step execution:
 
 - Digest all imports + the step configuration.
-- Check if a digest exists from the current digest.
+- Check if a digest exists from the current cache.
   - If the digest exists:
     - Restore all exports from the found digest.
     - Restore a container if it exists.

